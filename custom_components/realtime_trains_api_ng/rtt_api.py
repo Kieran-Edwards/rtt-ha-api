@@ -24,7 +24,7 @@ class RttApi:
         self.api_auth_token = api_auth_token
         self.bearer_token: Optional[str] = None
         self.bearer_token_expiry: Optional[float] = None
-        self.base_url = f"{RTT_API_BASE_URL}/api/{RTT_API_VERSION}"
+        self.base_url = RTT_API_BASE_URL
         self.auth_url = f"{RTT_API_BASE_URL}/api/get_access_token"
         self.session: Optional[aiohttp.ClientSession] = None
         self.rate_limit_info = {}
@@ -53,13 +53,12 @@ class RttApi:
         
         headers = {
             "Authorization": f"Bearer {self.api_auth_token}",
-            "Content-Type": "application/json",
         }
         
         _LOGGER.debug(f"Attempting token exchange at {self.auth_url}")
         
         try:
-            async with session.post(
+            async with session.get(
                 self.auth_url,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=10),
@@ -75,7 +74,7 @@ class RttApi:
                 
                 data = await response.json()
                 _LOGGER.debug(f"Token exchange response data: {data}")
-                bearer_token = data.get("accessToken")
+                bearer_token = data.get("token")
                 
                 if not bearer_token:
                     raise RttApiError("No bearer token in response")
@@ -224,25 +223,17 @@ class RttApi:
             Dictionary with 'location' and 'services' keys
         """
         try:
-            endpoint = f"locations/{crs}/departures"
+            endpoint = "rtt/location"
             
-            params = {}
-            if time_offset_minutes != 0:
-                params["fromMinutes"] = time_offset_minutes
+            params = {"code": crs}
+            
+            if destination_crs:
+                params["filterTo"] = destination_crs
+            
             if time_window_minutes != 120:
-                params["toMinutes"] = time_offset_minutes + time_window_minutes
+                params["timeWindow"] = time_window_minutes
             
             data = await self._request("GET", endpoint, params)
-            
-            # Filter by destination if provided
-            if destination_crs and data.get("services"):
-                filtered = []
-                for service in data["services"]:
-                    # Check if this service goes to our destination
-                    destinations = service.get("destination", [])
-                    if destinations and destinations[0].get("crs") == destination_crs:
-                        filtered.append(service)
-                data["services"] = filtered
             
             return data
             
@@ -269,24 +260,17 @@ class RttApi:
             Dictionary with 'location' and 'services' keys
         """
         try:
-            endpoint = f"locations/{crs}/arrivals"
+            endpoint = "rtt/location"
             
-            params = {}
-            if time_offset_minutes != 0:
-                params["fromMinutes"] = time_offset_minutes
+            params = {"code": crs}
+            
+            if origin_crs:
+                params["filterFrom"] = origin_crs
+            
             if time_window_minutes != 120:
-                params["toMinutes"] = time_offset_minutes + time_window_minutes
+                params["timeWindow"] = time_window_minutes
             
             data = await self._request("GET", endpoint, params)
-            
-            # Filter by origin if provided
-            if origin_crs and data.get("services"):
-                filtered = []
-                for service in data["services"]:
-                    origins = service.get("origin", [])
-                    if origins and origins[0].get("crs") == origin_crs:
-                        filtered.append(service)
-                data["services"] = filtered
             
             return data
             
@@ -302,15 +286,26 @@ class RttApi:
         """Get detailed information about a specific train service.
         
         Args:
-            service_uid: Unique service identifier
-            service_date: Service date in format YYYY-MM-DD
+            service_uid: Unique service identifier (e.g., "gb-nr:L01525:2025-10-26")
+            service_date: Service date in format YYYY-MM-DD (not used if service_uid includes date)
             
         Returns:
             Dictionary with detailed service information including all stops
         """
         try:
-            endpoint = f"services/{service_uid}/{service_date}"
-            return await self._request("GET", endpoint)
+            endpoint = "rtt/service"
+            
+            # If service_uid includes the full unique identity (namespace:identity:date), use that
+            if ":" in service_uid:
+                params = {"uniqueIdentity": service_uid}
+            else:
+                # Otherwise use identity and date separately
+                params = {
+                    "identity": service_uid,
+                    "departureDate": service_date,
+                }
+            
+            return await self._request("GET", endpoint, params)
         except RttApiError as err:
             _LOGGER.error(f"Error fetching service {service_uid}: {err}")
             return {}

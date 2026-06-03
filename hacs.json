@@ -1,7 +1,7 @@
 {
   "name": "Realtime Trains API (Next Generation)",
   "description": "Home Assistant integration for the new Realtime Trains Next Generation API with Bearer token authentication",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "homeassistant": "2024.1.0",
   "render_readme": true,
   "filename": "custom_components/realtime_trains_api_ng"

@@ -107,8 +107,10 @@ class RttTrainSensor(CoordinatorEntity, SensorEntity):
         # Get the next/first train
         next_train = departures[0]
         
-        # Parse scheduled departure time
-        scheduled = next_train.get("scheduledDeparture")
+        # Parse scheduled departure time from temporalData.departure
+        temporal_data = next_train.get("temporalData", {})
+        departure_data = temporal_data.get("departure", {})
+        scheduled = departure_data.get("scheduleAdvertised")
         if not scheduled:
             return None
         
@@ -162,8 +164,14 @@ class RttTrainSensor(CoordinatorEntity, SensorEntity):
         Converts API response into a nice dict structure.
         """
         
-        scheduled_dep = service.get("scheduledDeparture", "")
-        estimated_dep = service.get("estimatedDeparture") or scheduled_dep
+        # Extract schedule metadata
+        schedule_metadata = service.get("scheduleMetadata", {})
+        
+        # Extract temporal data for departure
+        temporal_data = service.get("temporalData", {})
+        departure_data = temporal_data.get("departure", {})
+        scheduled_dep = departure_data.get("scheduleAdvertised", "")
+        estimated_dep = departure_data.get("realtimeForecast") or scheduled_dep
         
         # Calculate minutes until departure
         minutes_until = None
@@ -175,17 +183,32 @@ class RttTrainSensor(CoordinatorEntity, SensorEntity):
         except Exception:
             pass
         
+        # Extract location metadata for platform
+        location_metadata = service.get("locationMetadata", {})
+        platform_data = location_metadata.get("platform", {})
+        platform = platform_data.get("planned") if platform_data else None
+        
+        # Extract origin and destination
+        origin_list = service.get("origin", [])
+        dest_list = service.get("destination", [])
+        
+        origin_name = origin_list[0].get("location", {}).get("description", "Unknown") if origin_list else "Unknown"
+        origin_crs = origin_list[0].get("location", {}).get("shortCodes", ["Unknown"])[0] if origin_list else "Unknown"
+        
+        dest_name = dest_list[0].get("location", {}).get("description", "Unknown") if dest_list else "Unknown"
+        dest_crs = dest_list[0].get("location", {}).get("shortCodes", ["Unknown"])[0] if dest_list else "Unknown"
+        
         # Extract basic service info
         train_info = {
-            "service_uid": service.get("serviceUid"),
-            "operator": service.get("operator", {}).get("name", "Unknown"),
+            "service_uid": schedule_metadata.get("uniqueIdentity"),
+            "operator": schedule_metadata.get("operator", {}).get("name", "Unknown"),
             "scheduled_departure": scheduled_dep,
             "estimated_departure": estimated_dep,
-            "platform": service.get("platform"),
-            "origin": service.get("origin", [{}])[0].get("name", "Unknown"),
-            "origin_crs": service.get("origin", [{}])[0].get("crs", "Unknown"),
-            "destination": service.get("destination", [{}])[0].get("name", "Unknown"),
-            "destination_crs": service.get("destination", [{}])[0].get("crs", "Unknown"),
+            "platform": platform,
+            "origin": origin_name,
+            "origin_crs": origin_crs,
+            "destination": dest_name,
+            "destination_crs": dest_crs,
             "minutes": minutes_until,
             "stops": None,
             "journey_time_mins": None,

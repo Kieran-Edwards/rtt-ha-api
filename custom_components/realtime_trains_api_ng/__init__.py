@@ -144,47 +144,62 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
                     "destination": None,
                 }
             
+            # New API response structure: services array is at root
             departures = departures_data.get("services", [])
-            station = departures_data.get("location", {})
+            # Location info is in query.location
+            station = departures_data.get("query", {}).get("location", {})
             
             # Optionally fetch detailed journey data for first X trains
             if journey_data_for_x_trains > 0:
                 for service in departures[:journey_data_for_x_trains]:
-                    service_uid = service.get("serviceUid")
-                    scheduled = service.get("scheduledDeparture", "")
+                    # New API structure: uniqueIdentity in scheduleMetadata
+                    schedule_metadata = service.get("scheduleMetadata", {})
+                    service_uid = schedule_metadata.get("uniqueIdentity", "")
                     
-                    # Extract date from ISO-8601 datetime (YYYY-MM-DD part)
-                    if scheduled:
-                        service_date = scheduled.split("T")[0]
-                        
+                    # Extract departure date from scheduleMetadata
+                    departure_date = schedule_metadata.get("departureDate", "")
+                    
+                    if service_uid:
                         try:
                             # Get detailed service information
                             service_info = await self.api.fetch_service_details(
                                 service_uid,
-                                service_date,
+                                departure_date,
                             )
                             
                             if service_info:
-                                # Extract stops information
-                                stops = service_info.get("stops", [])
+                                # Extract locations information (new API calls it "locations")
+                                locations = service_info.get("service", {}).get("locations", [])
                                 
                                 # Create journey data dict
                                 service["journey_data"] = {
-                                    "stops": len(stops),
-                                    "estimated_arrival": service_info.get("estimatedArrival"),
-                                    "scheduled_arrival": service_info.get("scheduledArrival"),
+                                    "stops": len(locations),
+                                    "estimated_arrival": None,
+                                    "scheduled_arrival": None,
                                     "stops_of_interest": []
                                 }
                                 
+                                # Get arrival time from temporalData
+                                if locations:
+                                    last_location = locations[-1]
+                                    temporal_data = last_location.get("temporalData", {})
+                                    arrival_data = temporal_data.get("arrival", {})
+                                    if arrival_data:
+                                        service["journey_data"]["scheduled_arrival"] = arrival_data.get("scheduleAdvertised")
+                                        service["journey_data"]["estimated_arrival"] = arrival_data.get("realtimeForecast")
+                                
                                 # Find stops of interest within this journey
                                 for stop_code in stops_of_interest:
-                                    for stop in stops:
-                                        if stop.get("crs") == stop_code:
+                                    for location in locations:
+                                        loc = location.get("location", {})
+                                        if loc.get("shortCodes") and stop_code in loc.get("shortCodes", []):
+                                            temporal_data = location.get("temporalData", {})
+                                            arrival_data = temporal_data.get("arrival", {})
                                             service["journey_data"]["stops_of_interest"].append({
                                                 "stop_code": stop_code,
-                                                "name": stop.get("name"),
-                                                "scheduled_arrival": stop.get("scheduledArrival"),
-                                                "estimated_arrival": stop.get("estimatedArrival"),
+                                                "name": loc.get("description"),
+                                                "scheduled_arrival": arrival_data.get("scheduleAdvertised") if arrival_data else None,
+                                                "estimated_arrival": arrival_data.get("realtimeForecast") if arrival_data else None,
                                             })
                         
                         except RttApiError as err:

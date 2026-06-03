@@ -18,7 +18,7 @@ CONF_TIME_OFFSET = "time_offset"
 DEFAULT_SCAN_INTERVAL = 90  # seconds between API calls
 
 # RTT API Configuration
-RTT_API_BASE_URL = "https://api.realtimetrains.co.uk"
+RTT_API_BASE_URL = "https://data.rtt.io"
 RTT_API_VERSION = "v1"
 
 # Rate limits (from RTT API documentation)
