@@ -225,7 +225,8 @@ class RttApi:
             Dictionary with 'location' and 'services' keys
         """
         try:
-            endpoint = "rtt/location"
+            # Try Network Rail specific endpoint first (uses CRS codes)
+            endpoint = "gb-nr/location"
 
             params = {"code": crs}
 
@@ -264,10 +265,11 @@ class RttApi:
             Dictionary with 'location' and 'services' keys
         """
         try:
-            endpoint = "rtt/location"
-            
+            # Use Network Rail specific endpoint (uses CRS codes)
+            endpoint = "gb-nr/location"
+
             params = {"code": crs}
-            
+
             if origin_crs:
                 params["filterFrom"] = origin_crs
             
