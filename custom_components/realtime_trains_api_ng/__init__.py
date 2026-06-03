@@ -66,15 +66,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry when the integration is removed."""
-    
+
     # Unload all platforms (this removes entities)
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         # Clean up data
         api = hass.data[DOMAIN][entry.entry_id]["api"]
         await api.close()
         hass.data[DOMAIN].pop(entry.entry_id)
-    
+
     return unload_ok
+
+
+async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Update a config entry when options are changed."""
+
+    # Reload the integration to apply the new configuration
+    await async_unload_entry(hass, entry)
+    return await async_setup_entry(hass, entry)
 
 
 class RttDataUpdateCoordinator(DataUpdateCoordinator):

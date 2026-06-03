@@ -5,6 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
@@ -22,7 +23,7 @@ from .rtt_api import RttApi, RttApiError
 
 class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for RTT integration."""
-    
+
     VERSION = 1
     
     async def async_step_user(
@@ -69,6 +70,65 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={
                 "learn_more": "Get your API authorization token from https://api-portal.rtt.io/",
+            },
+        )
+
+    @staticmethod
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Get the options flow for this handler."""
+        return RttOptionsFlow(config_entry)
+
+
+class RttOptionsFlow(config_entries.OptionsFlow):
+    """Handle options flow for RTT integration."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry):
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: Optional[Dict[str, Any]] = None
+    ) -> FlowResult:
+        """Handle options flow - add a new query."""
+
+        errors = {}
+
+        if user_input is not None:
+            origin = user_input.get(CONF_ORIGIN, "").strip().upper()
+            destination = user_input.get(CONF_DESTINATION, "").strip().upper()
+
+            if not origin or not destination:
+                errors["base"] = "required_fields"
+            else:
+                # Add new query to existing queries
+                current_queries = self.config_entry.data.get(CONF_QUERIES, [])
+                new_query = {
+                    CONF_ORIGIN: origin,
+                    CONF_DESTINATION: destination,
+                }
+                current_queries.append(new_query)
+
+                # Update config entry with new queries
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    data={
+                        **self.config_entry.data,
+                        CONF_QUERIES: current_queries,
+                    },
+                )
+                return self.async_create_entry(title="", data=None)
+
+        # Show form for adding a query
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required(CONF_ORIGIN): str,
+                vol.Required(CONF_DESTINATION): str,
+            }),
+            description_placeholders={
+                "example": "LDS for Leeds, KGX for King's Cross",
             },
         )
 
