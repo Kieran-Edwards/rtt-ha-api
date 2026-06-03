@@ -3,6 +3,7 @@ import aiohttp
 import asyncio
 import logging
 import time
+import datetime
 from typing import Optional, Dict, Any
 
 from .const import RTT_API_BASE_URL, RTT_API_VERSION
@@ -24,7 +25,7 @@ class RttApi:
         self.bearer_token: Optional[str] = None
         self.bearer_token_expiry: Optional[float] = None
         self.base_url = f"{RTT_API_BASE_URL}/api/{RTT_API_VERSION}"
-        self.auth_url = f"{RTT_API_BASE_URL}/auth"
+        self.auth_url = f"{RTT_API_BASE_URL}/api/get_access_token"
         self.session: Optional[aiohttp.ClientSession] = None
         self.rate_limit_info = {}
     
@@ -55,25 +56,42 @@ class RttApi:
             "Content-Type": "application/json",
         }
         
+        _LOGGER.debug(f"Attempting token exchange at {self.auth_url}")
+        
         try:
             async with session.post(
                 self.auth_url,
                 headers=headers,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
+                _LOGGER.debug(f"Token exchange response status: {response.status}")
+                
                 if response.status == 401:
                     raise RttApiError("Invalid API authorization token")
                 elif response.status >= 400:
+                    error_text = await response.text()
+                    _LOGGER.error(f"Token exchange failed with status {response.status}: {error_text}")
                     raise RttApiError(f"Token exchange failed with status {response.status}")
                 
                 data = await response.json()
-                bearer_token = data.get("access_token")
+                _LOGGER.debug(f"Token exchange response data: {data}")
+                bearer_token = data.get("accessToken")
                 
                 if not bearer_token:
                     raise RttApiError("No bearer token in response")
                 
-                # Set expiry time (30 minutes from now, minus 5 minute buffer)
-                self.bearer_token_expiry = time.time() + (30 * 60) - (5 * 60)
+                # Parse expiry time from validUntil field
+                valid_until = data.get("validUntil")
+                if valid_until:
+                    # validUntil is an ISO-8601 datetime string
+                    expiry_dt = datetime.datetime.fromisoformat(valid_until.replace('Z', '+00:00'))
+                    self.bearer_token_expiry = expiry_dt.timestamp()
+                    # Add 5 minute buffer
+                    self.bearer_token_expiry -= (5 * 60)
+                else:
+                    # Fallback to 30 minutes from now
+                    self.bearer_token_expiry = time.time() + (30 * 60) - (5 * 60)
+                
                 self.bearer_token = bearer_token
                 
                 _LOGGER.debug("Successfully exchanged API auth token for bearer token")
@@ -82,6 +100,7 @@ class RttApi:
         except asyncio.TimeoutError:
             raise RttApiError("Token exchange timeout (10 seconds)")
         except aiohttp.ClientError as err:
+            _LOGGER.error(f"Token exchange connection error: {err}")
             raise RttApiError(f"Token exchange connection error: {err}")
     
     def _is_token_expired(self) -> bool:
