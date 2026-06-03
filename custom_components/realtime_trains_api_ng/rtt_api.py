@@ -180,7 +180,9 @@ class RttApi:
                     _LOGGER.warning(f"Not found: {url}")
                     return {}
                 elif response.status >= 400:
-                    raise RttApiError(f"API returned status {response.status}")
+                    error_text = await response.text()
+                    _LOGGER.error(f"API request failed: {response.status} - {error_text}")
+                    raise RttApiError(f"API returned status {response.status}: {error_text}")
                 
                 return await response.json()
                 
@@ -212,31 +214,33 @@ class RttApi:
         time_window_minutes: int = 120,
     ) -> Dict[str, Any]:
         """Get departures from a station.
-        
+
         Args:
             crs: CRS code of origin station (e.g., 'LDS' for Leeds)
             destination_crs: Optional CRS to filter by destination
             time_offset_minutes: Minutes from now to start looking
             time_window_minutes: Time window width
-            
+
         Returns:
             Dictionary with 'location' and 'services' keys
         """
         try:
             endpoint = "rtt/location"
-            
+
             params = {"code": crs}
-            
+
             if destination_crs:
                 params["filterTo"] = destination_crs
-            
+
+            # timeWindow should be a string according to the API spec
             if time_window_minutes != 120:
-                params["timeWindow"] = time_window_minutes
-            
+                params["timeWindow"] = str(time_window_minutes)
+
+            _LOGGER.debug(f"Fetching departures with params: {params}")
             data = await self._request("GET", endpoint, params)
-            
+
             return data
-            
+
         except RttApiError as err:
             _LOGGER.error(f"Error fetching departures from {crs}: {err}")
             return {}
