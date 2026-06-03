@@ -26,18 +26,21 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up sensor platform.
-    
+
     Called when the integration is set up. Creates a sensor for each query.
     """
-    
+
     data = hass.data[DOMAIN][entry.entry_id]
     coordinators = data["coordinators"]
     queries = data["queries"]
-    
+
+    _LOGGER.info(f"Setting up sensor platform with {len(queries)} queries")
+
     sensors = []
-    
+
     # Create a sensor for each query
     for idx, (query, coordinator) in enumerate(zip(queries, coordinators.values())):
+        _LOGGER.info(f"Creating sensor for query {idx}: {query}")
         sensors.append(
             RttTrainSensor(
                 coordinator=coordinator,
@@ -46,7 +49,8 @@ async def async_setup_entry(
                 entry_id=entry.entry_id,
             )
         )
-    
+
+    _LOGGER.info(f"Adding {len(sensors)} sensors")
     async_add_entities(sensors)
 
 

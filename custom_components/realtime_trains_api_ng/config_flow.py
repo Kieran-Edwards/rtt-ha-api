@@ -105,6 +105,8 @@ class RttOptionsFlow(config_entries.OptionsFlow):
                 }
                 current_queries.append(new_query)
 
+                _LOGGER.info(f"Saving {len(current_queries)} queries to options: {current_queries}")
+
                 # Update config entry options with new queries
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
@@ -115,6 +117,9 @@ class RttOptionsFlow(config_entries.OptionsFlow):
                 return self.async_create_entry(title="", data=None)
 
         # Show form for adding a query
+        current_queries = self.config_entry.options.get(CONF_QUERIES, [])
+        _LOGGER.info(f"Current queries in options: {current_queries}")
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({

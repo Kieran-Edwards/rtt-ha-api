@@ -36,12 +36,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Check both data and options for queries
     queries = entry.options.get(CONF_QUERIES, entry.data.get(CONF_QUERIES, []))
 
+    _LOGGER.info(f"Setting up RTT integration with {len(queries)} queries")
+
     # Create API client
     api = RttApi(api_auth_token=api_auth_token)
 
     # Create a data coordinator for each query
     coordinators = {}
     for idx, query in enumerate(queries):
+        _LOGGER.info(f"Creating coordinator for query {idx}: {query}")
         coordinator = RttDataUpdateCoordinator(
             hass=hass,
             api=api,
@@ -62,6 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    _LOGGER.info(f"RTT integration setup complete with {len(coordinators)} coordinators")
     return True
 
 
