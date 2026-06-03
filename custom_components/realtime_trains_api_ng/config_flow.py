@@ -77,15 +77,11 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Get the options flow for this handler."""
-        return RttOptionsFlow(config_entry)
+        return RttOptionsFlow()
 
 
 class RttOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for RTT integration."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry):
-        """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: Optional[Dict[str, Any]] = None
