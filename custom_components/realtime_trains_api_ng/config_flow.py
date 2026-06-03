@@ -89,10 +89,7 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="queries",
             data_schema=vol.Schema({
-                vol.Optional(CONF_QUERIES, default=[]): vol.All(
-                    cv.ensure_list,
-                    vol.Length(min=1),
-                ),
+                vol.Optional(CONF_QUERIES, default=[]): list,
             }),
             description_placeholders={
                 "example": "Example query: origin=LDS destination=KGX",
@@ -101,7 +98,6 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 # Helper imports
-import homeassistant.helpers.config_validation as cv
 import logging
 
 _LOGGER = logging.getLogger(__name__)
