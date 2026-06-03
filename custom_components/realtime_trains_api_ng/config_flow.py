@@ -29,12 +29,12 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
         """Handle the initial setup step - API auth token entry."""
-        
+
         errors = {}
-        
+
         if user_input is not None:
             api_auth_token = user_input[CONF_API_AUTH_TOKEN].strip()
-            
+
             # Validate token by testing token exchange
             api = RttApi(api_auth_token=api_auth_token)
             try:
@@ -43,18 +43,23 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not bearer_token:
                     errors["base"] = "invalid_token"
                 else:
-                    # Token is valid! Store it in context and move to queries step
-                    self.context["api_auth_token"] = api_auth_token
+                    # Token is valid! Create config entry
                     await api.close()
-                    return await self.async_step_queries()
-            
+                    return self.async_create_entry(
+                        title="Realtime Trains API",
+                        data={
+                            CONF_API_AUTH_TOKEN: api_auth_token,
+                            CONF_QUERIES: [],
+                        },
+                    )
+
             except RttApiError as err:
                 errors["base"] = "cannot_connect"
                 _LOGGER.error(f"Token validation error: {err}")
-            
+
             finally:
                 await api.close()
-        
+
         # Show API auth token input form
         return self.async_show_form(
             step_id="user",
@@ -64,35 +69,6 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
             description_placeholders={
                 "learn_more": "Get your API authorization token from https://api-portal.rtt.io/",
-            },
-        )
-    
-    async def async_step_queries(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> FlowResult:
-        """Handle queries setup step."""
-        
-        if user_input is not None:
-            # Get API auth token from previous step
-            api_auth_token = self.context.get("api_auth_token")
-            
-            # Create config entry with API auth token and queries
-            return self.async_create_entry(
-                title="Realtime Trains API",
-                data={
-                    CONF_API_AUTH_TOKEN: api_auth_token,
-                    CONF_QUERIES: user_input.get(CONF_QUERIES, []),
-                },
-            )
-        
-        # Show form for adding queries
-        return self.async_show_form(
-            step_id="queries",
-            data_schema=vol.Schema({
-                vol.Optional(CONF_QUERIES, default=[]): list,
-            }),
-            description_placeholders={
-                "example": "Example query: origin=LDS destination=KGX",
             },
         )
 
