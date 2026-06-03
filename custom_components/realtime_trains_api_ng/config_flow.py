@@ -5,7 +5,6 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
@@ -103,18 +102,17 @@ class RttOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "required_fields"
             else:
                 # Add new query to existing queries
-                current_queries = self.config_entry.data.get(CONF_QUERIES, [])
+                current_queries = self.config_entry.options.get(CONF_QUERIES, [])
                 new_query = {
                     CONF_ORIGIN: origin,
                     CONF_DESTINATION: destination,
                 }
                 current_queries.append(new_query)
 
-                # Update config entry with new queries
+                # Update config entry options with new queries
                 self.hass.config_entries.async_update_entry(
                     self.config_entry,
-                    data={
-                        **self.config_entry.data,
+                    options={
                         CONF_QUERIES: current_queries,
                     },
                 )

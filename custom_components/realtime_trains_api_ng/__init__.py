@@ -27,17 +27,18 @@ PLATFORMS = [Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Realtime Trains API from a config entry.
-    
+
     This is called when the integration is added to Home Assistant.
     It creates the API client, coordinators for each query, and platforms.
     """
-    
+
     api_auth_token = entry.data[CONF_API_AUTH_TOKEN]
-    queries = entry.data.get(CONF_QUERIES, [])
-    
+    # Check both data and options for queries
+    queries = entry.options.get(CONF_QUERIES, entry.data.get(CONF_QUERIES, []))
+
     # Create API client
     api = RttApi(api_auth_token=api_auth_token)
-    
+
     # Create a data coordinator for each query
     coordinators = {}
     for idx, query in enumerate(queries):
@@ -50,17 +51,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Fetch initial data
         await coordinator.async_config_entry_first_refresh()
         coordinators[idx] = coordinator
-    
+
     # Store API and coordinators in hass.data for use by other components
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": api,
         "coordinators": coordinators,
         "queries": queries,
     }
-    
+
     # Set up sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
+
     return True
 
 
@@ -79,10 +80,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_update_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Update a config entry when options are changed."""
-
-    # Reload the integration to apply the new configuration
-    await async_unload_entry(hass, entry)
-    return await async_setup_entry(hass, entry)
+    await hass.config_entries.async_reload(entry.entry_id)
+    return True
 
 
 class RttDataUpdateCoordinator(DataUpdateCoordinator):
