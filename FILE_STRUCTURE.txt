@@ -1,0 +1,211 @@
+╔═════════════════════════════════════════════════════════════════════════════╗
+║   HOME ASSISTANT REALTIME TRAINS API INTEGRATION - BUILT FROM SCRATCH      ║
+╚═════════════════════════════════════════════════════════════════════════════╝
+
+📂 DIRECTORY STRUCTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+ha_rtt_integration/                          ← ROOT FOLDER
+│
+├── 📄 README.md                             ← Installation & usage guide
+├── 📄 BUILD_GUIDE.md                        ← Architecture explanation  
+│
+└── 📁 custom_components/
+    └── 📁 realtime_trains_api_ng/           ← Integration folder
+        ├── 📄 manifest.json                 ← Integration metadata (13 lines)
+        ├── 📄 const.py                      ← Constants file (25 lines)
+        ├── 📄 rtt_api.py                    ← API wrapper (320 lines)
+        ├── 📄 __init__.py                   ← Main integration (180 lines)
+        ├── 📄 config_flow.py                ← Setup UI (95 lines)
+        └── 📄 sensor.py                     ← Sensor platform (300 lines)
+
+DOCUMENTATION FILES
+═══════════════════════════════════════════════════════════════════════════════
+
+In outputs root folder:
+  📄 00_START_HERE.md                 ← Read this first!
+  📄 INTEGRATION_SUMMARY.md           ← Project overview
+  📄 QUICKSTART.md                    ← 5-minute quick start
+  📄 MIGRATION.md                     ← Migrate from old API
+  📄 PROJECT_STRUCTURE.md             ← File structure explanation
+  📄 README.md                         ← Installation guide
+  📄 BUILD_GUIDE.md                   ← Architecture deep-dive
+
+GETTING STARTED
+═══════════════════════════════════════════════════════════════════════════════
+
+1. READ: 00_START_HERE.md
+   └─ 10 minute overview of what you have
+
+2. COPY: ha_rtt_integration/custom_components/realtime_trains_api_ng/
+   └─ To: ~/.homeassistant/custom_components/
+
+3. RESTART: Home Assistant
+   └─ Settings → System → Restart
+
+4. CONFIGURE: Settings → Devices & Services → Create Integration
+   └─ Search "Realtime Trains API (Next Generation)"
+
+5. SETUP: Enter Bearer token + station codes
+   └─ Get token from: https://api-portal.rtt.io/
+
+6. VERIFY: Check sensor appears
+   └─ Developer Tools → States → search "sensor.next_train"
+
+FILES EXPLAINED
+═══════════════════════════════════════════════════════════════════════════════
+
+MANIFEST.JSON (13 lines)
+├─ domain: "realtime_trains_api_ng"
+├─ name: "Realtime Trains API (Next Generation)"
+├─ version: "1.0.0"
+└─ Tells Home Assistant about the integration
+
+CONST.PY (25 lines)
+├─ DOMAIN = "realtime_trains_api_ng"
+├─ CONF_TOKEN, CONF_ORIGIN, CONF_DESTINATION, etc.
+├─ RTT_API_BASE_URL = "https://api.realtimetrains.co.uk"
+└─ Central configuration constants
+
+RTT_API.PY (320 lines)
+├─ class RttApi:
+│  ├─ __init__(token)           - Initialize with Bearer token
+│  ├─ search_departures()       - Get trains leaving a station
+│  ├─ search_arrivals()         - Get trains arriving at a station
+│  ├─ fetch_service_details()   - Get detailed train info
+│  └─ get_api_info()            - Check API status
+└─ All HTTP requests with error handling
+
+__INIT__.PY (180 lines)
+├─ async_setup_entry()          - Called when integration loads
+├─ async_unload_entry()         - Called when unloading
+└─ RttDataUpdateCoordinator:
+   └─ _async_update_data()      - Fetches data every 90 seconds
+
+CONFIG_FLOW.PY (95 lines)
+├─ RttConfigFlow class:
+│  ├─ async_step_user()         - Get Bearer token
+│  └─ async_step_queries()      - Configure stations
+└─ Handles setup UI
+
+SENSOR.PY (300 lines)
+├─ async_setup_entry()          - Create sensors
+└─ RttTrainSensor class:
+   ├─ native_value              - State: minutes until train
+   └─ extra_state_attributes    - Full train details
+
+TECHNOLOGY STACK
+═══════════════════════════════════════════════════════════════════════════════
+
+Language:           Python 3.11+
+Async Framework:    asyncio + aiohttp
+Config Validation:  voluptuous
+Home Assistant:     2024.1.0+
+API Auth:           Bearer Token (RFC 6750)
+API Format:         JSON with ISO-8601 datetimes
+
+CODE STATISTICS
+═══════════════════════════════════════════════════════════════════════════════
+
+Python Files:       6
+Configuration:      1 (manifest.json)
+Documentation:      2 (README.md, BUILD_GUIDE.md)
+
+Total Code Lines:   ~930
+├─ rtt_api.py:      320 (API wrapper)
+├─ sensor.py:       300 (Sensor entities)
+├─ __init__.py:     180 (Main integration)
+├─ config_flow.py:  95  (Setup UI)
+└─ const.py:        25  (Constants)
+
+INTEGRATION FEATURES
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ Bearer Token Authentication (new RTT API)
+✅ Multiple Route Queries
+✅ Detailed Journey Information
+✅ Stops of Interest Tracking
+✅ Time Offset Support (for travel time)
+✅ Rate Limit Tracking
+✅ Error Handling & Retries
+✅ Config Flow UI
+✅ YAML Configuration Support
+✅ Async/Await Throughout
+✅ Automatic Updates (90 second intervals)
+
+SENSOR OUTPUT EXAMPLE
+═══════════════════════════════════════════════════════════════════════════════
+
+Sensor State:
+  sensor.next_train_from_lds_to_kgx = "23"  (minutes)
+
+Sensor Attributes:
+  {
+    "station": {
+      "crs": "LDS",
+      "name": "Leeds"
+    },
+    "next_trains": [
+      {
+        "operator": "LNER",
+        "platform": "5",
+        "scheduled_departure": "2024-01-15T14:30:00+00:00",
+        "estimated_departure": "2024-01-15T14:30:00+00:00",
+        "minutes": 23,
+        "stops": 8,
+        "journey_time_mins": 142,
+        "scheduled_arrival": "2024-01-15T16:52:00+00:00"
+      }
+    ]
+  }
+
+USAGE IN HOME ASSISTANT
+═══════════════════════════════════════════════════════════════════════════════
+
+Automation - Alert before train:
+  trigger:
+    platform: numeric_state
+    entity_id: sensor.next_train_from_lds_to_kgx
+    below: 5
+
+Template Sensor - Show operator:
+  state: >
+    {{ state_attr('sensor.next_train_from_lds_to_kgx', 'next_trains')[0]['operator'] }}
+
+Script - Get departure time:
+  variables:
+    departure: >
+      {{ state_attr('sensor.next_train_from_lds_to_kgx', 'next_trains')[0]['estimated_departure'] }}
+
+NEXT STEPS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. 👉 Read:   00_START_HERE.md
+2. 📖 Learn:  BUILD_GUIDE.md or README.md
+3. 📋 Setup:  Follow QUICKSTART.md
+4. 🚀 Deploy: Copy to Home Assistant
+5. ⚙️  Config: Add integration via UI
+6. 🤖 Extend: Create automations & templates
+
+COMMON STATION CODES
+═══════════════════════════════════════════════════════════════════════════════
+
+LDS = Leeds              WAT = Waterloo (London)  EDI = Edinburgh
+MAN = Manchester        KGX = King's Cross       GLQ = Glasgow
+BHM = Birmingham        VIC = Victoria           BRI = Bristol
+
+Full list: https://www.realtimetrains.co.uk/about/developer/
+
+HELP & RESOURCES
+═══════════════════════════════════════════════════════════════════════════════
+
+Installation:       → README.md
+Quick Start:        → QUICKSTART.md
+Architecture:       → BUILD_GUIDE.md
+Project Overview:   → INTEGRATION_SUMMARY.md
+API Documentation:  → https://realtimetrains.github.io/api-specification/
+Get Token:          → https://api-portal.rtt.io/
+
+═══════════════════════════════════════════════════════════════════════════════
+                    🎉 YOU'RE READY TO GET STARTED! 🎉
+═══════════════════════════════════════════════════════════════════════════════
