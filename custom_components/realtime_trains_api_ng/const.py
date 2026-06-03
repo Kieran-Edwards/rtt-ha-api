@@ -3,7 +3,9 @@
 DOMAIN = "realtime_trains_api_ng"
 
 # Configuration keys - these match what appears in configuration.yaml
-CONF_TOKEN = "token"
+CONF_API_AUTH_TOKEN = "api_auth_token"  # Long-lived token from api-portal.rtt.io
+CONF_BEARER_TOKEN = "bearer_token"  # Short-lived token (30 mins), exchanged from API auth token
+CONF_BEARER_TOKEN_EXPIRY = "bearer_token_expiry"  # Timestamp when bearer token expires
 CONF_QUERIES = "queries"
 CONF_ORIGIN = "origin"
 CONF_DESTINATION = "destination"

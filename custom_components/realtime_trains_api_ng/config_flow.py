@@ -8,7 +8,7 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     DOMAIN,
-    CONF_TOKEN,
+    CONF_API_AUTH_TOKEN,
     CONF_QUERIES,
     CONF_ORIGIN,
     CONF_DESTINATION,
@@ -28,21 +28,23 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> FlowResult:
-        """Handle the initial setup step - token entry."""
+        """Handle the initial setup step - API auth token entry."""
         
         errors = {}
         
         if user_input is not None:
-            token = user_input[CONF_TOKEN].strip()
+            api_auth_token = user_input[CONF_API_AUTH_TOKEN].strip()
             
-            # Validate token by testing API connection
-            api = RttApi(token=token)
+            # Validate token by testing token exchange
+            api = RttApi(api_auth_token=api_auth_token)
             try:
-                info = await api.get_api_info()
-                if not info:
+                # Try to exchange for a bearer token
+                bearer_token = await api._exchange_token()
+                if not bearer_token:
                     errors["base"] = "invalid_token"
                 else:
-                    # Token is valid! Store it and move to queries step
+                    # Token is valid! Store it in context and move to queries step
+                    self.context["api_auth_token"] = api_auth_token
                     await api.close()
                     return await self.async_step_queries()
             
@@ -53,15 +55,15 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             finally:
                 await api.close()
         
-        # Show token input form
+        # Show API auth token input form
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_TOKEN): str,
+                vol.Required(CONF_API_AUTH_TOKEN): str,
             }),
             errors=errors,
             description_placeholders={
-                "learn_more": "Get your bearer token from https://api-portal.rtt.io/",
+                "learn_more": "Get your API authorization token from https://api-portal.rtt.io/",
             },
         )
     
@@ -71,14 +73,14 @@ class RttConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle queries setup step."""
         
         if user_input is not None:
-            # Get token from previous step
-            token = self.context.get("token")
+            # Get API auth token from previous step
+            api_auth_token = self.context.get("api_auth_token")
             
-            # Create config entry with token and queries
+            # Create config entry with API auth token and queries
             return self.async_create_entry(
                 title="Realtime Trains API",
                 data={
-                    CONF_TOKEN: token,
+                    CONF_API_AUTH_TOKEN: api_auth_token,
                     CONF_QUERIES: user_input.get(CONF_QUERIES, []),
                 },
             )

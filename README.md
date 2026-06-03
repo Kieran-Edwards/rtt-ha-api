@@ -9,7 +9,7 @@ The old RTT API (`api.rtt.io`) is being shut down on **September 30, 2026**. Thi
 ## Prerequisites
 
 - Home Assistant 2024.1.0 or later
-- Bearer token from https://api-portal.rtt.io/
+- API authorization token from https://api-portal.rtt.io/
 - Internet connection
 
 ## Installation
@@ -41,25 +41,25 @@ mv ha_realtime_trains_api_ng realtime_trains_api_ng
 ### Step 2: Restart Home Assistant
 Settings → System → Restart
 
-### Step 3: Get Your API Token
+### Step 3: Get Your API Authorization Token
 
 1. Visit https://api-portal.rtt.io/
 2. Sign up or log in
-3. Request a **Bearer token** (not Basic Auth credentials)
-4. Copy the token
+3. Copy your **API authorization token** from the dashboard
+4. The integration will automatically exchange this for bearer tokens and keep them fresh
 
 ### Step 4: Configure the Integration
 
 **Via UI (Recommended):**
 1. Settings → Devices & Services → Create Integration
 2. Search for "Realtime Trains API (Next Generation)"
-3. Enter your Bearer token
+3. Enter your API authorization token
 4. Configure origin/destination stations
 
 **Or via YAML:**
 ```yaml
 realtime_trains_api_ng:
-  token: "your_bearer_token_here"
+  api_auth_token: "your_api_auth_token_here"
   queries:
     - origin: "LDS"
       destination: "KGX"
@@ -71,7 +71,7 @@ realtime_trains_api_ng:
 
 ```yaml
 realtime_trains_api_ng:
-  token: !secret rtt_token
+  api_auth_token: !secret rtt_api_auth_token
   queries:
     - origin: "LDS"      # Leeds
       destination: "KGX" # King's Cross
@@ -81,7 +81,7 @@ realtime_trains_api_ng:
 
 ```yaml
 realtime_trains_api_ng:
-  token: !secret rtt_token
+  api_auth_token: !secret rtt_api_auth_token
   queries:
     # Route 1: Leeds to London
     - origin: "LDS"
@@ -104,7 +104,7 @@ realtime_trains_api_ng:
 
 | Option | Type | Required | Default | Description |
 |--------|------|----------|---------|-------------|
-| `token` | string | Yes | - | Bearer token from api-portal.rtt.io |
+| `api_auth_token` | string | Yes | - | API authorization token from api-portal.rtt.io |
 | `origin` | string | Yes (per query) | - | CRS code of departure station |
 | `destination` | string | Yes (per query) | - | CRS code of arrival station |
 | `sensor_name` | string | No | Auto | Custom name for the sensor |
@@ -207,9 +207,9 @@ template:
 ## Troubleshooting
 
 ### "Invalid Token" Error
-- Verify token is from https://api-portal.rtt.io/ (not old api.rtt.io)
+- Verify API authorization token is from https://api-portal.rtt.io/ (not old api.rtt.io)
 - Check token hasn't expired
-- Ensure it's a Bearer token, not Basic Auth credentials
+- Ensure it's the API authorization token, not Basic Auth credentials
 
 ### "Cannot Connect" Error
 - Check internet connection
@@ -246,13 +246,13 @@ Default scan interval is 90 seconds. Don't set below 60 seconds.
 
 In `secrets.yaml`:
 ```yaml
-rtt_token: "your_bearer_token_here"
+rtt_api_auth_token: "your_api_auth_token_here"
 ```
 
 In `configuration.yaml`:
 ```yaml
 realtime_trains_api_ng:
-  token: !secret rtt_token
+  api_auth_token: !secret rtt_api_auth_token
   queries:
     - origin: "LDS"
       destination: "KGX"
@@ -292,11 +292,11 @@ Apache License 2.0
 
 If you're upgrading from the old `api.rtt.io`:
 
-1. Get new token from https://api-portal.rtt.io/
+1. Get new API authorization token from https://api-portal.rtt.io/
 2. Uninstall old integration
 3. Install this integration
 4. Change config:
-   - Replace `username`/`password` with `token`
+   - Replace `username`/`password` with `api_auth_token`
    - That's it! Rest of config is the same
 
 **Deadline**: Old API shuts down September 30, 2026.

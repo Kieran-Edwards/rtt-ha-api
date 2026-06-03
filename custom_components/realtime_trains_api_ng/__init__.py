@@ -10,7 +10,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .rtt_api import RttApi, RttApiError
 from .const import (
     DOMAIN,
-    CONF_TOKEN,
+    CONF_API_AUTH_TOKEN,
     CONF_QUERIES,
     CONF_ORIGIN,
     CONF_DESTINATION,
@@ -32,11 +32,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     It creates the API client, coordinators for each query, and platforms.
     """
     
-    token = entry.data[CONF_TOKEN]
+    api_auth_token = entry.data[CONF_API_AUTH_TOKEN]
     queries = entry.data.get(CONF_QUERIES, [])
     
     # Create API client
-    api = RttApi(token=token)
+    api = RttApi(api_auth_token=api_auth_token)
     
     # Create a data coordinator for each query
     coordinators = {}

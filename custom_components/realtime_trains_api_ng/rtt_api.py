@@ -2,6 +2,7 @@
 import aiohttp
 import asyncio
 import logging
+import time
 from typing import Optional, Dict, Any
 
 from .const import RTT_API_BASE_URL, RTT_API_VERSION
@@ -12,14 +13,18 @@ _LOGGER = logging.getLogger(__name__)
 class RttApi:
     """Client for the Realtime Trains Next Generation API."""
     
-    def __init__(self, token: str):
+    def __init__(self, api_auth_token: str):
         """Initialize the RTT API client.
         
         Args:
-            token: Bearer token for API authentication from https://api-portal.rtt.io/
+            api_auth_token: API authorization token from https://api-portal.rtt.io/
+                           This is used to exchange for a bearer token
         """
-        self.token = token
+        self.api_auth_token = api_auth_token
+        self.bearer_token: Optional[str] = None
+        self.bearer_token_expiry: Optional[float] = None
         self.base_url = f"{RTT_API_BASE_URL}/api/{RTT_API_VERSION}"
+        self.auth_url = f"{RTT_API_BASE_URL}/auth"
         self.session: Optional[aiohttp.ClientSession] = None
         self.rate_limit_info = {}
     
@@ -33,6 +38,77 @@ class RttApi:
         """Close the aiohttp session."""
         if self.session:
             await self.session.close()
+    
+    async def _exchange_token(self) -> str:
+        """Exchange API auth token for bearer token.
+        
+        Returns:
+            Bearer token string
+            
+        Raises:
+            RttApiError: If token exchange fails
+        """
+        session = await self._get_session()
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_auth_token}",
+            "Content-Type": "application/json",
+        }
+        
+        try:
+            async with session.post(
+                self.auth_url,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as response:
+                if response.status == 401:
+                    raise RttApiError("Invalid API authorization token")
+                elif response.status >= 400:
+                    raise RttApiError(f"Token exchange failed with status {response.status}")
+                
+                data = await response.json()
+                bearer_token = data.get("access_token")
+                
+                if not bearer_token:
+                    raise RttApiError("No bearer token in response")
+                
+                # Set expiry time (30 minutes from now, minus 5 minute buffer)
+                self.bearer_token_expiry = time.time() + (30 * 60) - (5 * 60)
+                self.bearer_token = bearer_token
+                
+                _LOGGER.debug("Successfully exchanged API auth token for bearer token")
+                return bearer_token
+                
+        except asyncio.TimeoutError:
+            raise RttApiError("Token exchange timeout (10 seconds)")
+        except aiohttp.ClientError as err:
+            raise RttApiError(f"Token exchange connection error: {err}")
+    
+    def _is_token_expired(self) -> bool:
+        """Check if bearer token is expired or will expire soon.
+        
+        Returns:
+            True if token needs refresh, False otherwise
+        """
+        if self.bearer_token is None or self.bearer_token_expiry is None:
+            return True
+        
+        # Refresh if we have less than 5 minutes remaining
+        return time.time() >= self.bearer_token_expiry
+    
+    async def _ensure_valid_token(self) -> str:
+        """Ensure we have a valid bearer token, refreshing if needed.
+        
+        Returns:
+            Valid bearer token
+            
+        Raises:
+            RttApiError: If token refresh fails
+        """
+        if self._is_token_expired():
+            await self._exchange_token()
+        
+        return self.bearer_token
     
     async def _request(
         self, 
@@ -56,9 +132,12 @@ class RttApi:
         session = await self._get_session()
         url = f"{self.base_url}/{endpoint}"
         
+        # Ensure we have a valid bearer token
+        token = await self._ensure_valid_token()
+        
         # Bearer token authentication header
         headers = {
-            "Authorization": f"Bearer {self.token}",
+            "Authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
         
