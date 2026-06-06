@@ -212,14 +212,18 @@ class RttApi:
         destination_crs: Optional[str] = None,
         time_offset_minutes: int = 0,
         time_window_minutes: int = 120,
+        from_datetime: Optional[str] = None,
+        to_datetime: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Get departures from a station.
 
         Args:
             crs: CRS code of origin station (e.g., 'LDS' for Leeds)
             destination_crs: Optional CRS to filter by destination
-            time_offset_minutes: Minutes from now to start looking
-            time_window_minutes: Time window width
+            time_offset_minutes: Minutes from now to start looking (deprecated, use from_datetime)
+            time_window_minutes: Time window width (deprecated, use to_datetime)
+            from_datetime: ISO-8601 datetime string for start of window (e.g., "2026-06-06T17:00:00Z")
+            to_datetime: ISO-8601 datetime string for end of window (e.g., "2026-06-06T23:00:00Z")
 
         Returns:
             Dictionary with 'location' and 'services' keys
@@ -233,8 +237,14 @@ class RttApi:
             if destination_crs:
                 params["filterTo"] = destination_crs
 
-            # timeWindow should be a string according to the API spec
-            if time_window_minutes != 120:
+            # Use explicit from/to datetimes if provided (preferred method)
+            if from_datetime:
+                params["from"] = from_datetime
+            if to_datetime:
+                params["to"] = to_datetime
+
+            # Fallback to timeWindow if no explicit datetimes provided
+            if not from_datetime and not to_datetime and time_window_minutes != 120:
                 params["timeWindow"] = str(time_window_minutes)
 
             _LOGGER.debug(f"Fetching departures with params: {params}")

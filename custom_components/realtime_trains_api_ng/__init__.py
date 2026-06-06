@@ -145,9 +145,18 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
             if time_offset_config:
                 time_offset_minutes = time_offset_config.get("minutes", 0)
             
-            # If including past trains, use negative offset
+            # Calculate from/to datetimes for API request
+            from_datetime = None
+            to_datetime = None
+            
             if include_past_trains:
-                time_offset_minutes = -(past_hours * 60)
+                # Calculate from/to similar to the bash script
+                now = datetime.now(datetime.timezone.utc)
+                from_dt = now - timedelta(hours=past_hours)
+                to_dt = now + timedelta(hours=6)  # 6 hours into the future
+                from_datetime = from_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                to_datetime = to_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                _LOGGER.debug(f"Using past trains window: from={from_datetime}, to={to_datetime}")
             
             # Fetch departures from origin station
             # Use larger time window (480 mins = 8 hours) to get more trains
@@ -156,6 +165,8 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
                 destination_crs=destination,
                 time_offset_minutes=time_offset_minutes,
                 time_window_minutes=480,
+                from_datetime=from_datetime,
+                to_datetime=to_datetime,
             )
             
             if not departures_data:
