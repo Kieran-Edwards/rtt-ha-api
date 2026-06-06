@@ -239,15 +239,15 @@ class RttApi:
 
             # Use explicit from/to datetimes if provided (preferred method)
             if from_datetime:
-                params["from"] = from_datetime
+                params["timeFrom"] = from_datetime
             if to_datetime:
-                params["to"] = to_datetime
+                params["timeTo"] = to_datetime
 
             # Fallback to timeWindow if no explicit datetimes provided
             if not from_datetime and not to_datetime and time_window_minutes != 120:
                 params["timeWindow"] = str(time_window_minutes)
 
-            _LOGGER.debug(f"Fetching departures with params: {params}")
+            _LOGGER.info(f"Fetching departures with params: {params}")
             data = await self._request("GET", endpoint, params)
 
             return data
