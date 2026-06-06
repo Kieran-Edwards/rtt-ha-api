@@ -187,6 +187,11 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
             
             # Optionally fetch detailed journey data for first X trains
             if journey_data_for_x_trains > 0:
+                # Automatically include destination in stops_of_interest if set
+                if destination and destination not in stops_of_interest:
+                    stops_of_interest = stops_of_interest + [destination]
+                    _LOGGER.debug(f"Added destination {destination} to stops_of_interest")
+                
                 for service in departures[:journey_data_for_x_trains]:
                     # New API structure: uniqueIdentity in scheduleMetadata
                     schedule_metadata = service.get("scheduleMetadata", {})
