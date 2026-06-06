@@ -6,6 +6,6 @@
   "config_flow": true,
   "documentation": "https://github.com/yourusername/ha_realtime_trains_api_ng",
   "issue_tracker": "https://github.com/yourusername/ha_realtime_trains_api_ng/issues",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "homeassistant": "2024.1.0"
 }

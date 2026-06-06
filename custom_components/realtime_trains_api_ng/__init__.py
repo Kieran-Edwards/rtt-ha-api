@@ -156,7 +156,7 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
                 to_dt = now + timedelta(hours=6)  # 6 hours into the future
                 from_datetime = from_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
                 to_datetime = to_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-                _LOGGER.debug(f"Using past trains window: from={from_datetime}, to={to_datetime}")
+                _LOGGER.info(f"Using past trains window: from={from_datetime}, to={to_datetime}")
             
             # Fetch departures from origin station
             # Use larger time window (480 mins = 8 hours) to get more trains
@@ -180,6 +180,10 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
             departures = departures_data.get("services", [])
             # Location info is in query.location
             station = departures_data.get("query", {}).get("location", {})
+            
+            _LOGGER.info(f"API returned {len(departures)} services")
+            if departures:
+                _LOGGER.info(f"First service data: {departures[0]}")
             
             # Optionally fetch detailed journey data for first X trains
             if journey_data_for_x_trains > 0:
