@@ -97,6 +97,8 @@ class RttOptionsFlow(config_entries.OptionsFlow):
             destination = user_input.get(CONF_DESTINATION, "").strip().upper()
             include_past_trains = user_input.get(CONF_INCLUDE_PAST_TRAINS, False)
             past_hours = user_input.get(CONF_PAST_HOURS, 2)
+            journey_data_for_x_trains = user_input.get(CONF_JOURNEY_DATA_FOR_NEXT_X_TRAINS, 10)
+            stops_of_interest_str = user_input.get("stops_of_interest_str", "").strip()
 
             if not origin or not destination:
                 errors["base"] = "required_fields"
@@ -106,12 +108,20 @@ class RttOptionsFlow(config_entries.OptionsFlow):
                 new_query = {
                     CONF_ORIGIN: origin,
                     CONF_DESTINATION: destination,
+                    CONF_JOURNEY_DATA_FOR_NEXT_X_TRAINS: journey_data_for_x_trains,
                 }
                 
                 # Add optional past trains configuration
                 if include_past_trains:
                     new_query[CONF_INCLUDE_PAST_TRAINS] = True
                     new_query[CONF_PAST_HOURS] = past_hours
+                
+                # Parse stops of interest if provided
+                if stops_of_interest_str:
+                    # Split by comma and strip whitespace
+                    stops = [s.strip().upper() for s in stops_of_interest_str.split(",") if s.strip()]
+                    if stops:
+                        new_query[CONF_STOPS_OF_INTEREST] = stops
                 
                 current_queries.append(new_query)
 
@@ -135,6 +145,8 @@ class RttOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required(CONF_ORIGIN): str,
                 vol.Required(CONF_DESTINATION): str,
+                vol.Optional(CONF_JOURNEY_DATA_FOR_NEXT_X_TRAINS, default=10): vol.Coerce(int),
+                vol.Optional("stops_of_interest_str", default=""): str,
                 vol.Optional(CONF_INCLUDE_PAST_TRAINS, default=False): bool,
                 vol.Optional(CONF_PAST_HOURS, default=2): vol.Coerce(int),
             }),
