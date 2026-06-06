@@ -1,6 +1,6 @@
 """The Realtime Trains API (Next Generation) integration."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -151,7 +151,7 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
             
             if include_past_trains:
                 # Calculate from/to similar to the bash script
-                now = datetime.now(datetime.timezone.utc)
+                now = datetime.now(timezone.utc)
                 from_dt = now - timedelta(hours=past_hours)
                 to_dt = now + timedelta(hours=6)  # 6 hours into the future
                 from_datetime = from_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
