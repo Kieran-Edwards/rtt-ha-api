@@ -13,6 +13,8 @@ CONF_JOURNEY_DATA_FOR_NEXT_X_TRAINS = "journey_data_for_next_x_trains"
 CONF_STOPS_OF_INTEREST = "stops_of_interest"
 CONF_SENSOR_NAME = "sensor_name"
 CONF_TIME_OFFSET = "time_offset"
+CONF_INCLUDE_PAST_TRAINS = "include_past_trains"
+CONF_PAST_HOURS = "past_hours"
 
 # Default values
 DEFAULT_SCAN_INTERVAL = 90  # seconds between API calls

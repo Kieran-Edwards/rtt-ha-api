@@ -17,6 +17,8 @@ from .const import (
     CONF_JOURNEY_DATA_FOR_NEXT_X_TRAINS,
     CONF_STOPS_OF_INTEREST,
     CONF_TIME_OFFSET,
+    CONF_INCLUDE_PAST_TRAINS,
+    CONF_PAST_HOURS,
     DEFAULT_SCAN_INTERVAL,
 )
 
@@ -135,17 +137,25 @@ class RttDataUpdateCoordinator(DataUpdateCoordinator):
             )
             stops_of_interest = self.query.get(CONF_STOPS_OF_INTEREST, [])
             time_offset_config = self.query.get(CONF_TIME_OFFSET, {})
+            include_past_trains = self.query.get(CONF_INCLUDE_PAST_TRAINS, False)
+            past_hours = self.query.get(CONF_PAST_HOURS, 2)
             
             # Get time offset in minutes if specified
             time_offset_minutes = 0
             if time_offset_config:
                 time_offset_minutes = time_offset_config.get("minutes", 0)
             
+            # If including past trains, use negative offset
+            if include_past_trains:
+                time_offset_minutes = -(past_hours * 60)
+            
             # Fetch departures from origin station
+            # Use larger time window (480 mins = 8 hours) to get more trains
             departures_data = await self.api.search_departures(
                 crs=origin,
                 destination_crs=destination,
                 time_offset_minutes=time_offset_minutes,
+                time_window_minutes=480,
             )
             
             if not departures_data:

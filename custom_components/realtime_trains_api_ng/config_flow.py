@@ -16,6 +16,8 @@ from .const import (
     CONF_STOPS_OF_INTEREST,
     CONF_SENSOR_NAME,
     CONF_TIME_OFFSET,
+    CONF_INCLUDE_PAST_TRAINS,
+    CONF_PAST_HOURS,
 )
 from .rtt_api import RttApi, RttApiError
 
@@ -93,6 +95,8 @@ class RttOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             origin = user_input.get(CONF_ORIGIN, "").strip().upper()
             destination = user_input.get(CONF_DESTINATION, "").strip().upper()
+            include_past_trains = user_input.get(CONF_INCLUDE_PAST_TRAINS, False)
+            past_hours = user_input.get(CONF_PAST_HOURS, 2)
 
             if not origin or not destination:
                 errors["base"] = "required_fields"
@@ -103,6 +107,12 @@ class RttOptionsFlow(config_entries.OptionsFlow):
                     CONF_ORIGIN: origin,
                     CONF_DESTINATION: destination,
                 }
+                
+                # Add optional past trains configuration
+                if include_past_trains:
+                    new_query[CONF_INCLUDE_PAST_TRAINS] = True
+                    new_query[CONF_PAST_HOURS] = past_hours
+                
                 current_queries.append(new_query)
 
                 _LOGGER.info(f"Saving {len(current_queries)} queries to options: {current_queries}")
@@ -125,6 +135,8 @@ class RttOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required(CONF_ORIGIN): str,
                 vol.Required(CONF_DESTINATION): str,
+                vol.Optional(CONF_INCLUDE_PAST_TRAINS, default=False): bool,
+                vol.Optional(CONF_PAST_HOURS, default=2): vol.Coerce(int),
             }),
             description_placeholders={
                 "example": "LDS for Leeds, KGX for King's Cross",

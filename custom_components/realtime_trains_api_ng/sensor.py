@@ -196,11 +196,28 @@ class RttTrainSensor(CoordinatorEntity, SensorEntity):
         origin_list = service.get("origin", [])
         dest_list = service.get("destination", [])
         
+        # Debug logging to see actual structure
+        _LOGGER.debug(f"Origin list structure: {origin_list}")
+        _LOGGER.debug(f"Destination list structure: {dest_list}")
+        
         origin_name = origin_list[0].get("location", {}).get("description", "Unknown") if origin_list else "Unknown"
-        origin_crs = origin_list[0].get("location", {}).get("shortCodes", ["Unknown"])[0] if origin_list else "Unknown"
+        # Try multiple possible locations for CRS code
+        origin_crs = "Unknown"
+        if origin_list:
+            loc = origin_list[0].get("location", {})
+            origin_crs = loc.get("shortCodes", ["Unknown"])[0] if loc.get("shortCodes") else "Unknown"
+            if origin_crs == "Unknown":
+                # Try crs field directly
+                origin_crs = loc.get("crs", "Unknown")
         
         dest_name = dest_list[0].get("location", {}).get("description", "Unknown") if dest_list else "Unknown"
-        dest_crs = dest_list[0].get("location", {}).get("shortCodes", ["Unknown"])[0] if dest_list else "Unknown"
+        dest_crs = "Unknown"
+        if dest_list:
+            loc = dest_list[0].get("location", {})
+            dest_crs = loc.get("shortCodes", ["Unknown"])[0] if loc.get("shortCodes") else "Unknown"
+            if dest_crs == "Unknown":
+                # Try crs field directly
+                dest_crs = loc.get("crs", "Unknown")
         
         # Extract basic service info
         train_info = {
